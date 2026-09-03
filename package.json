@@ -25,7 +25,7 @@
     "arbitrator": "ts-node scripts/arbitrate.ts",
     "check:dependencies": "node scripts/check-dependencies.mjs",
     "check:publication": "node scripts/check-publication.mjs",
-    "audit:dependencies": "npm audit --package-lock-only --audit-level=high",
+    "audit:dependencies": "npm audit --package-lock-only --omit=dev --audit-level=high",
     "example": "hardhat run examples/full-lifecycle.ts",
     "example:dispute": "hardhat run examples/dispute.ts",
     "example:timeout": "hardhat run examples/timeout-refund.ts",

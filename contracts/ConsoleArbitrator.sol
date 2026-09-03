@@ -104,6 +104,7 @@ contract ConsoleArbitrator is IArbitratorV04 {
     error AlreadyProposed();
     error DealNotDisputed(uint256 dealId, uint8 actualState);
     error DealUsesDifferentArbitrator(uint256 dealId, address actualArbitrator);
+    error InvalidDisputeRecord(uint256 dealId);
     error InsufficientRulingTime(uint256 dealId, uint64 rulingDeadline, uint256 requiredUntil);
     error NothingProposed();
     error OverrideWindowClosed();
@@ -156,7 +157,8 @@ contract ConsoleArbitrator is IArbitratorV04 {
         if (deal.arbitrator != address(this)) {
             revert DealUsesDifferentArbitrator(dealId, deal.arbitrator);
         }
-        (, uint64 rulingDeadline) = escrow.disputes(dealId);
+        (address challenger, uint64 rulingDeadline) = escrow.disputes(dealId);
+        if (challenger == address(0)) revert InvalidDisputeRecord(dealId);
         uint256 requiredUntil = block.timestamp + overrideWindow + MIN_PUSH_BUFFER;
         if (rulingDeadline < requiredUntil) {
             revert InsufficientRulingTime(dealId, rulingDeadline, requiredUntil);

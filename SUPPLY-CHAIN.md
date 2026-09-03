@@ -55,9 +55,23 @@ on the exact release commit before publication.
 - [GHSA-qw65-cvwx-89v3](https://github.com/fastify/fast-uri/security/advisories/GHSA-qw65-cvwx-89v3)
 - [GHSA-58mr-gqgx-xq4g](https://github.com/fastify/fast-uri/security/advisories/GHSA-58mr-gqgx-xq4g)
 
-The repository CI runs `npm audit --package-lock-only --audit-level=high`. This
-queries the registry's current advisory database and is therefore time-sensitive;
-the result must be read from the run for the exact release commit.
+The blocking CI advisory gate runs
+`npm audit --package-lock-only --omit=dev --audit-level=high`. It covers the
+runtime dependency shipped with the contract source. The lockfile policy still
+checks every development package's source, integrity hash, and installation
+scripts, but a clean runtime audit must not be read as a clean audit of the
+development toolchain.
+
+The full-lockfile audit on 3 September 2026 reported 40 development-toolchain
+findings (13 low, 7 moderate, and 20 high), principally through Hardhat 2 and
+its toolbox, plus `ajv-cli`. npm's blanket remediation would install Hardhat 3
+and toolbox 7, which are breaking upgrades. The release does not conceal that
+residual exposure behind an exception list or an unreviewed `npm audit fix
+--force`: operators should treat the JavaScript toolchain as untrusted build
+input, use it only with synthetic data and development keys, and review the
+open GitHub dependency alerts before changing or redistributing it. Migrating
+or reducing that toolchain is follow-up security work; it is not evidence that
+the contract source is safe.
 
 ## License review
 
@@ -76,7 +90,10 @@ not a substitute for reading the packages' license texts.
 - `package-lock.json` is committed; CI installs with `npm ci`.
 - `scripts/check-dependencies.mjs` rejects missing integrity hashes, non-registry
   package sources, and unreviewed installation scripts.
-- CI checks current high-severity npm advisories from the lockfile.
+- CI blocks on current high-severity npm advisories in runtime dependencies.
+- The complete development tree remains covered by the deterministic lockfile
+  policy and GitHub dependency alerts, with its known advisory exposure recorded
+  above.
 - GitHub Actions are pinned by commit SHA; the Foundry toolchain, Python runtime,
   and top-level Slither version are pinned.
 - The publication check rejects local paths and private-workspace references.
