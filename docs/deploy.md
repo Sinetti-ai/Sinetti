@@ -75,23 +75,45 @@ the end of a successful run.
 ## Running the synthetic lifecycles against a deployed contract
 
 `examples/full-lifecycle.ts`, `examples/dispute.ts`, and
-`examples/timeout-refund.ts` cannot be pointed at a network or an address
-today. Each one calls `deployLocal()` from `examples/_local.ts`
-unconditionally: that helper deploys its own fresh `SinettiEscrowV04`,
-`TestEUR`, and `MockManualArbitrator` on whatever network the script runs
-against, funds four Hardhat signer accounts from that network's own account
-list, and returns a `LocalContext` built entirely around those addresses.
-There is no `CONTRACT_ADDRESS` or `--network` branch in the examples
-themselves; running `hardhat run examples/full-lifecycle.ts --network
-sepolia` would deploy a brand-new escrow and token to Sepolia and run the
-lifecycle against those fresh contracts. The addresses that `deploy.ts`
-published would go untouched.
+`examples/timeout-refund.ts` can run two ways.
 
-To run these lifecycles against the addresses in `deployments/sepolia.json`
-without rewriting the examples, `_local.ts` would need a second path,
-something like a `deployLocal()` variant that accepts an existing escrow
-address, token address, and signer set instead of always deploying fresh
-ones, plus funded Sepolia accounts standing in for the four local signers
-(deployer, buyer, seller, verifier) with testnet ETH and the settlement
-token. That is a real, separate piece of work; this deliverable does not
-include it.
+Leave `SINETTI_ESCROW_ADDRESS` unset and nothing changes. Each script still
+deploys its own fresh `SinettiEscrowV04`, `TestEUR`, and
+`MockManualArbitrator` on the in-process Hardhat network, funds four Hardhat
+signer accounts from that network's own account list, and runs the lifecycle
+against those throwaway contracts. This is what `npm run example`,
+`example:dispute`, and `example:timeout` do.
+
+Set `SINETTI_ESCROW_ADDRESS`, `SINETTI_ARBITRATOR_ADDRESS`, and
+`SINETTI_TOKEN_ADDRESS`, for example to the values `deploy.ts` wrote into
+`deployments/sepolia.json`, and the same scripts attach to that escrow
+instead of deploying anything. Run them with `--network sepolia` (or whatever
+network the addresses live on) so they talk to the right chain. Attached mode
+needs its own signers, since there is no local Hardhat account list to draw
+from. Set `BUYER_PRIVATE_KEY`, `SELLER_PRIVATE_KEY`, and
+`VERIFIER_PRIVATE_KEY` to funded testnet keys, and for `examples/dispute.ts`
+only, `ARBITRATOR_AGENT_PRIVATE_KEY` and `ARBITRATOR_OFFICER_PRIVATE_KEY`
+matching the arbitrator the escrow was deployed with. None of these keys are
+ever printed.
+
+Attached mode never mints or funds anyone. Before opening a deal it checks
+that the buyer and seller hold enough native currency for gas and enough of
+the settlement token for their side of the deal, and it exits naming exactly
+which account is short instead of failing partway through a transaction. It
+also reads the deployed escrow's per-token caps, `maxAmountOf` and
+`maxBondOf`, and bond floors, and clamps the deal amount, bond, and
+challenger bond to fit under them, so a cap configured tighter than the
+examples' usual figures still produces a valid deal instead of a revert.
+
+There is no local clock to fast-forward on a public network. Where the local
+version calls Hardhat's `time.increaseTo`, attached mode polls the chain's
+own block timestamps and waits for real time to pass, printing how much
+longer it expects to wait every 30 seconds. Set
+`SINETTI_MAX_WAIT_SECONDS` to give up with a clear error instead of waiting
+indefinitely. The dispute example's wait is the arbitrator's override
+window. The deal it opens sets a ruling window long enough to clear that
+override window plus the arbitrator's one-hour push buffer, matching what
+`ConsoleArbitrator` itself requires before it will accept a ruling.
+
+Every transaction each script sends prints its hash, so a run against a
+public network leaves a trail that can be published as receipts.

@@ -7,27 +7,48 @@ import {
   tamperedDelivery
 } from "./_evidence";
 import {
-  AMOUNT,
-  BOND,
-  CHALLENGER_BOND,
   assertEqual,
-  deployLocal,
   exampleCriteria,
   fundAndOpen,
   postBond,
+  resolveContext,
   send
 } from "./_local";
+import { attachedWindows, waitUntilTimestamp, walletFromEnv } from "./_network";
 
 const STATE_REFUNDED = 6n;
 const OUTCOME_REFUND = 2n;
+const MIN_PUSH_BUFFER_SECONDS = 3600n; // ConsoleArbitrator.MIN_PUSH_BUFFER
 
 async function main(): Promise<void> {
-  const context = await deployLocal();
+  const context = await resolveContext();
+  const { amount, bond, challengerBond } = context.dealAmounts;
+
+  // ConsoleArbitrator requires the deal's rulingWindow to clear its own
+  // overrideWindow plus a 1-hour push buffer, or the escrow's timeout can
+  // fire before push() lands. Read overrideWindow() up front so the deal we
+  // open in attached mode actually admits a ruling.
+  let overrideWindowSeconds = 0n;
+  if (context.attached) {
+    overrideWindowSeconds = await (context.arbitrator as { overrideWindow(): Promise<bigint> }).overrideWindow();
+  }
+  const windows = context.attached
+    ? await attachedWindows(
+        context.escrow,
+        { challengeWindow: 3600n, rulingWindow: 86400n },
+        overrideWindowSeconds + MIN_PUSH_BUFFER_SECONDS
+      )
+    : undefined;
+
   const criteria = exampleCriteria();
   const delivery = exampleDelivery();
   console.log("Seller hashes the delivery in examples/delivery/");
   console.log(describeDelivery(delivery));
-  const dealId = await fundAndOpen(context, criteria, 3600n);
+
+  const buyerBalanceBefore = await context.token.balanceOf(context.buyerAddress);
+  const escrowBalanceBefore = await context.token.balanceOf(context.escrowAddress);
+
+  const dealId = await fundAndOpen(context, criteria, 3600n, windows);
   await postBond(context, dealId);
   await send(
     context,
@@ -62,26 +83,58 @@ async function main(): Promise<void> {
     );
   }
 
-  await send(
-    context,
-    "Mint challenger-bond tokens to buyer",
-    context.token.mint(context.buyerAddress, CHALLENGER_BOND)
-  );
+  if (!context.attached) {
+    await send(
+      context,
+      "Mint challenger-bond tokens to buyer",
+      (context.token as import("../typechain-types").TestEUR).mint(context.buyerAddress, challengerBond)
+    );
+  }
   await send(
     context,
     "Buyer approves challenger bond",
-    context.token.connect(context.buyer).approve(context.escrowAddress, CHALLENGER_BOND)
+    context.token.connect(context.buyer).approve(context.escrowAddress, challengerBond)
   );
   await send(
     context,
     "Buyer challenges the Pass, posting the challenger bond",
     context.escrow.connect(context.buyer).challenge(dealId)
   );
-  await send(
-    context,
-    "Arbitrator contract rules Refund; loser pays - seller bond slashed, challenger bond returned inside buyer credit",
-    context.arbitrator.rule(context.escrowAddress, dealId, OUTCOME_REFUND)
-  );
+
+  if (!context.attached) {
+    await send(
+      context,
+      "Arbitrator contract rules Refund; loser pays - seller bond slashed, challenger bond returned inside buyer credit",
+      (context.arbitrator as import("../typechain-types").MockManualArbitrator).rule(
+        context.escrowAddress,
+        dealId,
+        OUTCOME_REFUND
+      )
+    );
+  } else {
+    // ConsoleArbitrator's real flow: the agent proposes, the officer may
+    // overturn inside overrideWindow, and after the window anyone pushes the
+    // standing outcome to the escrow. The officer key is loaded so the
+    // account it names is available, but this happy path never needs to
+    // overturn: the agent proposes exactly the outcome we want ruled.
+    const arbitrator = context.arbitrator as import("../typechain-types").ConsoleArbitrator;
+    const agent = walletFromEnv("ARBITRATOR_AGENT_PRIVATE_KEY");
+    walletFromEnv("ARBITRATOR_OFFICER_PRIVATE_KEY"); // loaded, unused on this path
+    await send(
+      context,
+      "Arbitrator agent proposes Refund",
+      arbitrator.connect(agent).propose(dealId, OUTCOME_REFUND)
+    );
+    const proposal = await arbitrator.proposals(dealId);
+    const overridableUntil = proposal.proposedAt + overrideWindowSeconds;
+    await waitUntilTimestamp(overridableUntil, "ConsoleArbitrator's override window to close");
+    await send(
+      context,
+      "Anyone pushes the standing Refund ruling to the escrow",
+      arbitrator.connect(context.buyer).push(dealId)
+    );
+  }
+
   await send(
     context,
     "Buyer withdraws principal, slashed bond, and returned challenger bond",
@@ -89,13 +142,16 @@ async function main(): Promise<void> {
   );
 
   const deal = await context.escrow.getDeal(dealId);
+  const buyerBalanceAfter = await context.token.balanceOf(context.buyerAddress);
+  const escrowBalanceAfter = await context.token.balanceOf(context.escrowAddress);
+  // Local mode mints amount then challengerBond fresh after the "before" snapshot,
+  // so the buyer's delta includes both plus the slashed seller bond. Attached
+  // mode's buyer already held amount + challengerBond pre-funded before the
+  // snapshot, so only the slashed seller bond is new.
+  const expectedBuyerDelta = context.attached ? bond : amount + bond + challengerBond;
   assertEqual(deal.state, STATE_REFUNDED, "deal state");
-  assertEqual(
-    await context.token.balanceOf(context.buyerAddress),
-    AMOUNT + BOND + CHALLENGER_BOND,
-    "buyer refund"
-  );
-  assertEqual(await context.token.balanceOf(context.escrowAddress), 0n, "escrow balance");
+  assertEqual(buyerBalanceAfter - buyerBalanceBefore, expectedBuyerDelta, "buyer refund");
+  assertEqual(escrowBalanceAfter - escrowBalanceBefore, 0n, "escrow balance change");
   console.log(`\nSUCCESS: deal #${dealId} refunded by arbitrator ruling after buyer challenge; seller bond slashed to buyer, challenger bond returned.`);
 }
 
