@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "./hardhat.config.ts",
+    "./examples/**/*.ts",
+    "./src/**/*.ts",
+    "./typechain-types/**/*.ts"
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "version": "sinetti-arbitration-case/0.1",
+  "chain_id": "31337",
+  "escrow": "0x0000000000000000000000000000000000000001",
+  "arbitrator": "0x0000000000000000000000000000000000000002",
+  "deal_id": "1",
+  "terms_hash": "0x1111111111111111111111111111111111111111111111111111111111111111",
+  "evidence_hash": "0x2222222222222222222222222222222222222222222222222222222222222222",
+  "proposed_outcome": "refund",
+  "rationale": "The committed delivery does not satisfy the agreed schema.",
+  "decided_at": "2026-09-01T00:00:00Z"
+}

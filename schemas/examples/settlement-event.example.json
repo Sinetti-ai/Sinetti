@@ -1,0 +1,11 @@
+{
+  "deal_id": "42",
+  "reason": "ruling_refund",
+  "seller_credit": "0",
+  "buyer_credit": "40000000",
+  "token_address": "0x0000000000000000000000000000000000002001",
+  "tx_hash": "0x6a1f0e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1",
+  "block_number": 8564321,
+  "challenger_address": "0x0000000000000000000000000000000000001003",
+  "bond_slashed": "5000000"
+}

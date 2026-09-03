@@ -1,0 +1,34 @@
+# Foundry is an independent second engine. Compilation settings mirror
+# hardhat.config.ts exactly - solc 0.8.26 / Berlin / optimizer 200 - so both
+# engines test the same bytecode shape. cache_path is NOT the default "cache"
+# because that directory belongs to Hardhat.
+#
+[profile.default]
+src = "contracts"
+test = "test/foundry"
+out = "out"
+cache_path = "cache_forge"
+libs = ["node_modules"]
+remappings = ["@openzeppelin/contracts/=node_modules/@openzeppelin/contracts/"]
+solc_version = "0.8.26"
+evm_version = "berlin"
+optimizer = true
+optimizer_runs = 200
+
+[fuzz]
+runs = 256
+# Fixed seed keeps the always-run suite reproducible.
+seed = "0x53494e455454"
+
+[invariant]
+runs = 24
+depth = 64
+# Handlers probe wrong-state calls on purpose; a revert is data, not a failure.
+fail_on_revert = false
+
+[profile.deep.fuzz]
+runs = 5000
+
+[profile.deep.invariant]
+runs = 256
+depth = 256

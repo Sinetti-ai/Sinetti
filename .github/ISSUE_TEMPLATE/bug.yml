@@ -1,0 +1,50 @@
+name: Bug report
+description: Report a reproducible problem in the public implementation or documentation
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not report security vulnerabilities here. Use private vulnerability reporting from the repository Security tab.
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      description: Provide the release tag or full commit hash where you observed the problem.
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: Explain what happened and why it appears incorrect.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: List the smallest set of steps, inputs, or transactions needed to reproduce it.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Relevant output
+      description: Include sanitized logs, transaction hashes, or test output. Remove credentials and private case data.
+      render: shell
+  - type: checkboxes
+    id: disclosure
+    attributes:
+      label: Disclosure check
+      options:
+        - label: This report contains no credentials, private case data, or undisclosed vulnerability details.
+          required: true

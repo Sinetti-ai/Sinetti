@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sinetti.ai/schemas/evidence-envelope",
+  "title": "EvidenceEnvelope",
+  "description": "The seller's delivery package. `artifact_hash` is the SHA-256 of the RFC 8785 canonical serialization of `statement`, and is the exact value recorded on chain by submitDelivery (there, 0x-prefixed). Because the canonical bytes are what is hashed, `sha256sum` over the stored canonical statement reproduces the on-chain value with no Sinetti tooling. See docs/evidence.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "SHA-256 as 64 lowercase hex characters, with no 0x prefix"
+    }
+  },
+  "properties": {
+    "evidence_id": {
+      "type": "string"
+    },
+    "agreement_id": {
+      "type": "string"
+    },
+    "artifact_ref": {
+      "type": "string",
+      "description": "Where the delivered files can be fetched. Integrity comes from the per-file digests in statement.subject, never from this reference."
+    },
+    "artifact_hash": {
+      "$ref": "#/$defs/sha256",
+      "description": "SHA-256 of the canonical serialization of `statement`. Must equal the deal's on-chain evidenceHash."
+    },
+    "logs_ref": {
+      "type": "string",
+      "description": "Where the test log can be fetched. Its integrity is statement.predicate.logs_hash."
+    },
+    "statement": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "in-toto Statement v1 shape, copied not imported. The subject list is per-file: an archive is never hashed, because archive bytes vary run to run with entry order, timestamps and compression level.",
+      "properties": {
+        "_type": {
+          "type": "string",
+          "const": "https://in-toto.io/Statement/v1"
+        },
+        "predicateType": {
+          "type": "string",
+          "const": "https://sinetti.ai/Delivery/v0"
+        },
+        "subject": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Every delivered file, each with its own digest, sorted by the UTF-8 bytes of `name` ascending. UTF-8 byte order is specified because array order is preserved by RFC 8785 rather than imposed by it, so two producers that disagree about the order compute different artifact_hash values for byte-identical deliveries. It is what Python `sorted`, Go and Rust give by default; JavaScript's `<` on strings is UTF-16 code-unit order and differs whenever a supplementary-plane character is compared against one in U+E000-U+FFFF.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "POSIX path relative to the delivery root"
+              },
+              "digest": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "sha256": {
+                    "$ref": "#/$defs/sha256"
+                  }
+                },
+                "required": ["sha256"]
+              }
+            },
+            "required": ["name", "digest"]
+          }
+        },
+        "predicate": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "The fields docs/evidence.md checks. They sit inside the statement so the commitment covers them: a value outside the hashed statement could be edited without changing artifact_hash.",
+          "properties": {
+            "repo_commit_hash": {
+              "type": "string",
+              "description": "The exact revision under test"
+            },
+            "runtime_hash": {
+              "type": "string",
+              "description": "Fingerprint of the agreed execution environment"
+            },
+            "logs_hash": {
+              "$ref": "#/$defs/sha256",
+              "description": "SHA-256 of the test log content at logs_ref"
+            }
+          },
+          "required": ["repo_commit_hash", "runtime_hash", "logs_hash"]
+        }
+      },
+      "required": ["_type", "predicateType", "subject", "predicate"]
+    },
+    "submitted_by": {
+      "type": "string"
+    },
+    "submitted_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$"
+    },
+    "signature": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "evidence_id",
+    "agreement_id",
+    "artifact_ref",
+    "artifact_hash",
+    "logs_ref",
+    "statement",
+    "submitted_by",
+    "submitted_at",
+    "signature"
+  ]
+}

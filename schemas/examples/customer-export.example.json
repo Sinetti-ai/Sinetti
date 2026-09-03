@@ -1,0 +1,11 @@
+{
+  "export_id": "exp_2026_01_14_0001",
+  "generated_at": "2026-01-14T09:30:00Z",
+  "row_count": 3,
+  "columns": ["customer_id", "country", "tier", "signed_up_at"],
+  "rows": [
+    ["cus_0f21a7", "FI", "standard", "2025-11-02T08:14:00Z"],
+    ["cus_4c98be", "SE", "standard", "2025-12-19T16:41:00Z"],
+    ["cus_b3d105", "EE", "premium", "2026-01-03T11:05:00Z"]
+  ]
+}

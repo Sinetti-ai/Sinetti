@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sinetti.ai/schemas/customer-export",
+  "title": "SyntheticCustomerExport",
+  "description": "Schema used by the repository's synthetic local delivery example.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "export_id": { "type": "string", "minLength": 1 },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$"
+    },
+    "row_count": { "type": "integer", "minimum": 0 },
+    "columns": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "rows": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": { "type": "string" }
+      }
+    }
+  },
+  "required": ["export_id", "generated_at", "row_count", "columns", "rows"]
+}

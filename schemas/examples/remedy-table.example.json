@@ -1,0 +1,26 @@
+{
+  "id": "remedy_123",
+  "version": "1.0",
+  "entries": [
+    {
+      "failure_mode": "verification_pass",
+      "remedy": "release",
+      "description": "A buyer-accepted or permissionlessly finalized verifier Pass credits the full escrow and posted bond to the seller for withdrawal."
+    },
+    {
+      "failure_mode": "verification_fail_or_inconclusive",
+      "remedy": "arbitration",
+      "description": "A verifier Fail or Inconclusive verdict opens the seller's challenge window. Unchallenged, the verdict finalizes as a full refund with the seller bond returned. A seller challenge posts the signed challenger bond and hands the case to the deal's arbitrator contract, which rules Release or Refund inside the ruling window; the losing challenger forfeits the challenger bond, a ruling of Refund slashes the seller bond, and arbitrator silence past the ruling deadline executes the standing verdict with the challenger bond returned."
+    },
+    {
+      "failure_mode": "deadline_timeout",
+      "remedy": "refund",
+      "description": "A Funded or Delivered deal whose deadline passes with no verdict is claimable by anyone via claimTimeout: the full escrow credits to the buyer and the posted bond returns to the seller. Once a verdict is recorded, claimTimeout is unreachable; the only clock is the challenge window from the verification time, so the challenge window always exists in full."
+    },
+    {
+      "failure_mode": "mutual_cancel",
+      "remedy": "mutual_cancel",
+      "description": "A revision-bound EIP-712 cancellation offer atomically accepted by the counterparty credits the full escrow to the buyer and the posted bond to the seller; during a dispute the challenger bond unwinds to whichever party posted it."
+    }
+  ]
+}
