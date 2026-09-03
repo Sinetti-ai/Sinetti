@@ -119,7 +119,6 @@ async function main(): Promise<void> {
     // overturn: the agent proposes exactly the outcome we want ruled.
     const arbitrator = context.arbitrator as import("../typechain-types").ConsoleArbitrator;
     const agent = walletFromEnv("ARBITRATOR_AGENT_PRIVATE_KEY");
-    walletFromEnv("ARBITRATOR_OFFICER_PRIVATE_KEY"); // loaded, unused on this path
     await send(
       context,
       "Arbitrator agent proposes Refund",

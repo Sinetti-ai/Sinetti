@@ -256,7 +256,7 @@ export async function main(
   const minRulingWindow = requiredUint(env, "MIN_RULING_WINDOW_SECONDS");
   const participants = addressAllowlist(env, "PARTICIPANT_ALLOWLIST");
   const arbitrators = addressAllowlist(env, "ARBITRATOR_ALLOWLIST");
-  const agentKey = requiredAddress(env, "ARBITRATOR_AGENT_KEY");
+  const agentKey = requiredAddress(env, "ARBITRATOR_AGENT_ADDRESS");
   const officer = requiredAddress(env, "ARBITRATOR_OFFICER");
   const overrideWindow = requiredUint(env, "ARBITRATOR_OVERRIDE_WINDOW_SECONDS");
 

@@ -38,6 +38,11 @@ export function envAddress(name: string): string {
  */
 export function walletFromEnv(name: string): Signer {
   const key = requiredEnv(name);
+  // Validate the shape before ethers sees it: a malformed value would otherwise be
+  // echoed back inside the library's error message.
+  if (!/^0x[0-9a-fA-F]{64}$/.test(key)) {
+    throw new Error(`${name} is not a 32-byte hex private key. The value is not shown.`);
+  }
   return new hre.ethers.Wallet(key, hre.ethers.provider);
 }
 

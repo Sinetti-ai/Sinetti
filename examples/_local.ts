@@ -115,6 +115,7 @@ export async function send(
   if (!receipt) throw new Error(`Transaction ${transaction.hash} was not mined`);
 
   console.log(`\n${label}`);
+  console.log(`  tx: ${transaction.hash} (block ${receipt.blockNumber})`);
   for (const event of receipt.logs.map((log) => parseLog(context, log)).filter(Boolean) as LogDescription[]) {
     const fields = event.fragment.inputs.map((input, index) =>
       `${input.name}=${formatValue(context, input.name, input.type, event.args[index])}`
@@ -227,6 +228,15 @@ export async function attachRemote(): Promise<LocalContext> {
     "ConsoleArbitrator",
     arbitratorAddress
   )) as ConsoleArbitrator;
+
+  // Refuse to touch a mismatched deployment before any approval is granted.
+  const arbitratorEscrow = await arbitrator.escrow();
+  if (arbitratorEscrow.toLowerCase() !== escrowAddress.toLowerCase()) {
+    throw new Error(`SINETTI_ARBITRATOR_ADDRESS points at escrow ${arbitratorEscrow}, expected ${escrowAddress}.`);
+  }
+  if ((await escrow.maxAmountOf(tokenAddress)) === 0n) {
+    throw new Error(`SINETTI_TOKEN_ADDRESS ${tokenAddress} has no policy on escrow ${escrowAddress}.`);
+  }
 
   const dealAmounts = await attachedDealAmounts(escrow, tokenAddress, {
     amount: AMOUNT,

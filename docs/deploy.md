@@ -36,9 +36,10 @@ This runs `scripts/deploy.ts` against the `sepolia` network defined in
 `hardhat.config.ts`. It deploys `SinettiEscrowV04` first, then
 `ConsoleArbitrator` pointed at the escrow's address, and refuses to proceed
 if the deployer equals the pauser, the arbitrator's agent key equals its
-officer, or the officer equals the pauser. A single key controlling pause,
-proposals, and overrides defeats the point of separating those roles, so the
-script stops and prints which pairing collided rather than deploying anyway.
+officer, or the officer equals the pauser. The deployer may also serve as the
+officer; the check only separates pause, proposal and override authority. A
+single key controlling all three defeats the point of separating those roles,
+so the script stops and prints which pairing collided rather than deploying.
 
 The script writes `deployments/sepolia.json` with both contract addresses,
 transaction hashes, block numbers, the constructor arguments used, the
@@ -92,7 +93,7 @@ network the addresses live on) so they talk to the right chain. Attached mode
 needs its own signers, since there is no local Hardhat account list to draw
 from. Set `BUYER_PRIVATE_KEY`, `SELLER_PRIVATE_KEY`, and
 `VERIFIER_PRIVATE_KEY` to funded testnet keys, and for `examples/dispute.ts`
-only, `ARBITRATOR_AGENT_PRIVATE_KEY` and `ARBITRATOR_OFFICER_PRIVATE_KEY`
+only, `ARBITRATOR_AGENT_PRIVATE_KEY`
 matching the arbitrator the escrow was deployed with. None of these keys are
 ever printed.
 

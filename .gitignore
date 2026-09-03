@@ -14,8 +14,7 @@ deployments/
 *.log
 .DS_Store
 
-# Published deployment registries are public record; keep local-chain artefacts out.
+# Published deployment registries are public record; everything else under deployments/ stays local.
 !deployments/
+deployments/*
 !deployments/sepolia.json
-deployments/hardhat.json
-deployments/localhost.json
