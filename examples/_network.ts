@@ -45,7 +45,7 @@ const POLL_INTERVAL_MS = 5_000;
 const PROGRESS_INTERVAL_S = 30;
 // ponytail: a flat gas floor, not a real estimate. Bump if a network's gas
 // price makes 0.01 native currency too tight for the transactions below.
-const MIN_NATIVE_FOR_GAS = hre.ethers.parseEther("0.01");
+const MIN_NATIVE_FOR_GAS = hre.ethers.parseEther(process.env.SINETTI_MIN_NATIVE ?? "0.002");
 
 export { MIN_NATIVE_FOR_GAS };
 
