@@ -19,6 +19,9 @@ import { attachedWindows, waitUntilTimestamp, walletFromEnv } from "./_network";
 const STATE_REFUNDED = 6n;
 const OUTCOME_REFUND = 2n;
 const MIN_PUSH_BUFFER_SECONDS = 3600n; // ConsoleArbitrator.MIN_PUSH_BUFFER
+// On a public network the challenge and the proposal land in different blocks,
+// so the ruling window must cover the wall-clock gap between them as well.
+const PROPOSE_SLACK_SECONDS = 3600n;
 
 async function main(): Promise<void> {
   const context = await resolveContext();
@@ -26,8 +29,9 @@ async function main(): Promise<void> {
 
   // ConsoleArbitrator requires the deal's rulingWindow to clear its own
   // overrideWindow plus a 1-hour push buffer, or the escrow's timeout can
-  // fire before push() lands. Read overrideWindow() up front so the deal we
-  // open in attached mode actually admits a ruling.
+  // fire before push() lands, and propose() measures that from its own block,
+  // not from the challenge. Read overrideWindow() up front and add slack so
+  // the deal we open in attached mode actually admits a ruling.
   let overrideWindowSeconds = 0n;
   if (context.attached) {
     overrideWindowSeconds = await (context.arbitrator as { overrideWindow(): Promise<bigint> }).overrideWindow();
@@ -36,7 +40,7 @@ async function main(): Promise<void> {
     ? await attachedWindows(
         context.escrow,
         { challengeWindow: 3600n, rulingWindow: 86400n },
-        overrideWindowSeconds + MIN_PUSH_BUFFER_SECONDS
+        overrideWindowSeconds + MIN_PUSH_BUFFER_SECONDS + PROPOSE_SLACK_SECONDS
       )
     : undefined;
 
