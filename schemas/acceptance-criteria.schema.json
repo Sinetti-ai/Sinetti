@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sinetti.ai/schemas/acceptance-criteria",
+  "title": "AcceptanceCriteria",
+  "description": "What counts as delivered, fixed before a deal opens. An Agreement names one of these by `acceptance_criteria_id`, so the standard a delivery is judged against is chosen at funding time rather than argued afterwards. `evidence_required` lists the artefacts the seller's EvidenceEnvelope must carry, and `auto_release_threshold` states the condition that settles the deal without anyone disputing it ('all_tests_pass' in the reference example).",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "acceptance_criteria_id": {
+      "type": "string"
+    },
+    "acceptance_type": {
+      "type": "string",
+      "enum": ["test_suite", "hash_match", "schema_validity", "api_result", "workflow_logs"]
+    },
+    "verification_method": {
+      "type": "string"
+    },
+    "evidence_required": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "auto_release_threshold": {
+      "type": "string"
+    },
+    "schema_or_test_ref": {
+      "type": "string"
+    },
+    "artifact_path": {
+      "type": "string",
+      "description": "For schema_validity, the committed POSIX-relative delivered file to validate."
+    },
+    "schema_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "SHA-256 of the repository schema bytes named by schema_or_test_ref."
+    },
+    "repo_commit_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$",
+      "description": "Exact Git revision whose verifier implementation is authorized."
+    },
+    "runtime_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "SHA-256 of the authorized package-lock.json runtime dependency graph."
+    },
+    "verifier_version": {
+      "type": "string"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$"
+    }
+  },
+  "required": [
+    "acceptance_criteria_id",
+    "acceptance_type",
+    "verification_method",
+    "evidence_required",
+    "auto_release_threshold",
+    "schema_or_test_ref",
+    "created_at"
+  ],
+  "allOf": [
+    {
+      "if": { "properties": { "acceptance_type": { "const": "schema_validity" } } },
+      "then": {
+        "properties": {
+          "artifact_path": true,
+          "schema_hash": true,
+          "repo_commit_hash": true,
+          "runtime_hash": true,
+          "verifier_version": true
+        },
+        "required": [
+          "artifact_path",
+          "schema_hash",
+          "repo_commit_hash",
+          "runtime_hash",
+          "verifier_version"
+        ]
+      }
+    }
+  ]
+}

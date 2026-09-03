@@ -1,0 +1,9 @@
+{
+  "verification_id": "ver_123",
+  "agreement_id": "agr_123",
+  "evidence_id": "ev_123",
+  "result": "pass",
+  "reason_code": "tests_passed",
+  "verifier_version": "0.1.0",
+  "verified_at": "2026-07-15T11:15:00Z"
+}

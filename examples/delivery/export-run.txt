@@ -1,0 +1,5 @@
+2026-01-14T09:29:58Z  export.start          source=warehouse.customers window=2025-11-01..2026-01-14
+2026-01-14T09:29:59Z  export.query          rows_scanned=3 rows_emitted=3
+2026-01-14T09:30:00Z  export.schema_check   schema=schemas/customer-export.schema.json result=valid
+2026-01-14T09:30:00Z  export.write          path=customer-export.json bytes=367
+2026-01-14T09:30:00Z  export.done           status=ok

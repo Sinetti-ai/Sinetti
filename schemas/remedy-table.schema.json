@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sinetti.ai/schemas/remedy-table",
+  "title": "RemedyTable",
+  "description": "Maps covered failure modes to the limited adjudicated remedies v0 can execute: full release, full refund, neutral mutual cancellation, or arbitration of a challenged verdict. On-chain mutual cancellation atomically consumes one party's EIP-712 offer through the counterparty; the single-use offer is bound to the deal's exact revision and expires within at most one hour. Arbitration is all-or-nothing - the arbitrator contract rules Release or Refund, the losing challenger forfeits the challenger bond, and a ruling of Refund is the only path that slashes the seller bond; v0 cannot execute other partial payments or remedies.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+$"
+    },
+    "entries": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "failure_mode": {
+            "type": "string"
+          },
+          "remedy": {
+            "type": "string",
+            "enum": [
+              "release",
+              "refund",
+              "mutual_cancel",
+              "arbitration"
+            ]
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "failure_mode",
+          "remedy",
+          "description"
+        ]
+      }
+    }
+  },
+  "required": [
+    "id",
+    "version",
+    "entries"
+  ]
+}

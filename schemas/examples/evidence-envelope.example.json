@@ -1,0 +1,39 @@
+{
+  "evidence_id": "ev_7f3a2c",
+  "agreement_id": "agr_4b8e1d",
+  "artifact_ref": "encrypted_store_ref",
+  "artifact_hash": "11e493248f1928ef7392c34a0b22f20d7b4c79e1bcb14e2c553537032b6aabbd",
+  "logs_ref": "encrypted_store_ref",
+  "statement": {
+    "_type": "https://in-toto.io/Statement/v1",
+    "predicateType": "https://sinetti.ai/Delivery/v0",
+    "subject": [
+      {
+        "name": "package.json",
+        "digest": {
+          "sha256": "be731103cf8c9fcf3068ce14aa6e4d29d7c7b8aa63530d92573cba9cd5e5ca9f"
+        }
+      },
+      {
+        "name": "src/calculateFee.ts",
+        "digest": {
+          "sha256": "035982127152cf2c258b00305ddb2322b6162f2621d133cfbcec48492a1ca995"
+        }
+      },
+      {
+        "name": "tests/calculateFee.test.ts",
+        "digest": {
+          "sha256": "b1e1af6d0209fa59a5e345d52cd78801ffb2e6efd0af5e05338e0c5ae7ca5a7b"
+        }
+      }
+    ],
+    "predicate": {
+      "repo_commit_hash": "9f2c1b7a4e6d80f3c5a1b9e7d2f4a6c8e0b3d5f7",
+      "runtime_hash": "82a0105e8658c07c74d09799911e21768341ac784c8e24f09af01692f53cea07",
+      "logs_hash": "146d9111c51419487e3f4891e0a34d95f6298c39d9d256b44b6faf94dc9d227c"
+    }
+  },
+  "submitted_by": "agent_seller",
+  "submitted_at": "2026-07-15T11:10:00Z",
+  "signature": "seller_signature"
+}

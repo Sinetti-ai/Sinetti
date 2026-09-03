@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sinetti.ai/schemas/verification-result",
+  "title": "VerificationResult",
+  "description": "The verifier's verdict on one delivery, and the input to the optimistic path: a 'pass' settles to the seller by default unless somebody challenges it inside the agreement's challenge window. The escrow records `result` without inspecting the reasoning, so `reason_code` is the only thing distinguishing a delivery that genuinely failed ('schema_invalid', 'evidence_missing') from a verifier that could not reach a judgement ('runtime_error', 'timeout') - a distinction the contract cannot make and a reader must. `verifier_version` is what makes a verdict reproducible after the fact.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "verification_id": {
+      "type": "string"
+    },
+    "agreement_id": {
+      "type": "string"
+    },
+    "evidence_id": {
+      "type": "string"
+    },
+    "result": {
+      "type": "string",
+      "enum": [
+        "pass",
+        "fail",
+        "inconclusive"
+      ]
+    },
+    "reason_code": {
+      "type": "string",
+      "enum": [
+        "tests_passed",
+        "schema_invalid",
+        "evidence_missing",
+        "timeout",
+        "runtime_error"
+      ]
+    },
+    "verifier_version": {
+      "type": "string"
+    },
+    "verified_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$"
+    }
+  },
+  "required": [
+    "verification_id",
+    "agreement_id",
+    "evidence_id",
+    "result",
+    "reason_code",
+    "verifier_version",
+    "verified_at"
+  ],
+  "allOf": [
+    {
+      "if": { "properties": { "result": { "const": "pass" } } },
+      "then": { "properties": { "reason_code": { "const": "tests_passed" } } }
+    },
+    {
+      "if": { "properties": { "result": { "const": "fail" } } },
+      "then": {
+        "properties": {
+          "reason_code": { "enum": ["schema_invalid", "evidence_missing"] }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "result": { "const": "inconclusive" } } },
+      "then": {
+        "properties": {
+          "reason_code": { "enum": ["evidence_missing", "timeout", "runtime_error"] }
+        }
+      }
+    }
+  ]
+}

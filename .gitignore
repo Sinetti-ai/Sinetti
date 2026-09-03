@@ -1,0 +1,15 @@
+node_modules/
+dist/
+out/
+cache/
+cache_forge/
+artifacts/
+typechain-types/
+slither.json
+coverage/
+deployments/
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store

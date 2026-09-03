@@ -1,0 +1,4 @@
+{
+  "filter_paths": "node_modules|contracts/mocks|test/foundry",
+  "compile_force_framework": "hardhat"
+}
