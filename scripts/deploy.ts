@@ -1,5 +1,5 @@
 import { execSync } from "node:child_process";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import hre from "hardhat";
@@ -291,8 +291,26 @@ export async function main(
 
   console.log(`Deploying to ${networkName} (chainId ${network.chainId}) from ${deployerAddress}`);
 
-  const escrow = await deployContract(runtime, "SinettiEscrowV04", escrowArgs);
-  console.log(`SinettiEscrowV04: ${escrow.address}`);
+  // ESCROW_ADDRESS reuses a live escrow and deploys only a new ConsoleArbitrator
+  // against it. Existing deals stay bound to whatever arbitrator they named.
+  const reuseEscrow = env.ESCROW_ADDRESS?.trim();
+  const deploymentPath = path.join(deploymentsDir, `${networkName}.json`);
+  let escrow: { address: string; txHash?: string; blockNumber?: number };
+  let escrowRecord: unknown;
+  if (reuseEscrow) {
+    escrow = { address: requiredAddress(env, "ESCROW_ADDRESS") };
+    const code = await runtime.ethers.provider.getCode(escrow.address);
+    if (code === "0x") throw new Error(`ESCROW_ADDRESS ${escrow.address} has no bytecode.`);
+    const previous = JSON.parse(await readFile(deploymentPath, "utf8")) as { escrow: { address: string } };
+    if (previous.escrow.address.toLowerCase() !== escrow.address.toLowerCase()) {
+      throw new Error(`ESCROW_ADDRESS ${escrow.address} does not match ${deploymentPath} (${previous.escrow.address}).`);
+    }
+    escrowRecord = previous.escrow;
+    console.log(`Reusing SinettiEscrowV04: ${escrow.address}`);
+  } else {
+    escrow = await deployContract(runtime, "SinettiEscrowV04", escrowArgs);
+    console.log(`SinettiEscrowV04: ${escrow.address}`);
+  }
 
   const arbitratorArgs = [escrow.address, agentKey, officer, overrideWindow];
   const arbitrator = await deployContract(runtime, "ConsoleArbitrator", arbitratorArgs);
@@ -308,7 +326,7 @@ export async function main(
     chainId: Number(network.chainId),
     commit: commitHash(),
     timestamp: new Date().toISOString(),
-    escrow: {
+    escrow: escrowRecord ?? {
       contract: "SinettiEscrowV04",
       address: escrow.address,
       txHash: escrow.txHash,
@@ -334,7 +352,6 @@ export async function main(
     }
   };
 
-  const deploymentPath = path.join(deploymentsDir, `${networkName}.json`);
   await mkdir(deploymentsDir, { recursive: true });
   await writeFile(deploymentPath, `${JSON.stringify(deployment, null, 2)}\n`);
 

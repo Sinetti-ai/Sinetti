@@ -14,7 +14,7 @@ import {
   resolveContext,
   send
 } from "./_local";
-import { attachedWindows, waitUntilTimestamp, walletFromEnv } from "./_network";
+import { attachedWindows, walletFromEnv } from "./_network";
 
 const STATE_REFUNDED = 6n;
 const OUTCOME_REFUND = 2n;
@@ -116,25 +116,23 @@ async function main(): Promise<void> {
       )
     );
   } else {
-    // ConsoleArbitrator's real flow: the agent proposes, the officer may
-    // overturn inside overrideWindow, and after the window anyone pushes the
-    // standing outcome to the escrow. The officer key is loaded so the
-    // account it names is available, but this happy path never needs to
-    // overturn: the agent proposes exactly the outcome we want ruled.
+    // ConsoleArbitrator's real flow: the agent proposes, the officer reviews.
+    // The officer either overturns inside overrideWindow, rules outright with
+    // rule() (lands on the escrow immediately), or stays silent, in which case
+    // anyone pushes the standing outcome after the window. This receipt takes
+    // the reviewed path: propose, then the officer confirms the same outcome.
     const arbitrator = context.arbitrator as import("../typechain-types").ConsoleArbitrator;
     const agent = walletFromEnv("ARBITRATOR_AGENT_PRIVATE_KEY");
+    const officer = walletFromEnv("ARBITRATOR_OFFICER_PRIVATE_KEY");
     await send(
       context,
       "Arbitrator agent proposes Refund",
       arbitrator.connect(agent).propose(dealId, OUTCOME_REFUND)
     );
-    const proposal = await arbitrator.proposals(dealId);
-    const overridableUntil = proposal.proposedAt + overrideWindowSeconds;
-    await waitUntilTimestamp(overridableUntil, "ConsoleArbitrator's override window to close");
     await send(
       context,
-      "Anyone pushes the standing Refund ruling to the escrow",
-      arbitrator.connect(context.buyer).push(dealId)
+      "Officer reviews and rules Refund; the ruling lands on the escrow now",
+      arbitrator.connect(officer).rule(dealId, OUTCOME_REFUND)
     );
   }
 
