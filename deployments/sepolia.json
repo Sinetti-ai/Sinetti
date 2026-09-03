@@ -1,8 +1,8 @@
 {
   "network": "sepolia",
   "chainId": 11155111,
-  "commit": "1afd22721efa2f5d9199e977c4d49b242e19174e",
-  "timestamp": "2026-09-03T19:35:49.494Z",
+  "commit": "0ae6933e1b75cc5d6dd85cb9c157a3357dfedd9d",
+  "timestamp": "2026-09-03T23:42:12.893Z",
   "escrow": {
     "contract": "SinettiEscrowV04",
     "address": "0x73862690E12621b3BC5749281CE4b23fe4a1695c",
@@ -27,9 +27,9 @@
   },
   "arbitrator": {
     "contract": "ConsoleArbitrator",
-    "address": "0xf11022Abcf5cF5c1177Eae01F630EeA51dB9d6b4",
-    "txHash": "0x47b56618c74dd0966b79eba3d477b0b4efc64c39fe43ae479e10665fab7aa480",
-    "block": 11628624,
+    "address": "0x713D92780c3Ccb3416FCD50468C18ABB5449B8C7",
+    "txHash": "0xcaa16d5406352b1593a5c0b8cc7e1501c3bcdbf70194ff9f2402420d5b019c2e",
+    "block": 11629795,
     "constructorArgs": [
       "0x73862690E12621b3BC5749281CE4b23fe4a1695c",
       "0xaF28506B7504cE611e52De21E8e6464aB09Dc007",
@@ -40,9 +40,9 @@
   "verification": {
     "kind": "reproducible from chain; the tooling that ran these checks is not attested",
     "method": "cast against https://ethereum-sepolia-rpc.publicnode.com",
-    "reproduce": "cast code 0x73862690E12621b3BC5749281CE4b23fe4a1695c --rpc-url https://ethereum-sepolia-rpc.publicnode.com; cast call 0xf11022Abcf5cF5c1177Eae01F630EeA51dB9d6b4 \"escrow()(address)\" --rpc-url https://ethereum-sepolia-rpc.publicnode.com; cast call 0xf11022Abcf5cF5c1177Eae01F630EeA51dB9d6b4 \"overrideWindow()(uint64)\" --rpc-url https://ethereum-sepolia-rpc.publicnode.com",
+    "reproduce": "cast code 0x73862690E12621b3BC5749281CE4b23fe4a1695c --rpc-url https://ethereum-sepolia-rpc.publicnode.com; cast call 0x713D92780c3Ccb3416FCD50468C18ABB5449B8C7 \"escrow()(address)\" --rpc-url https://ethereum-sepolia-rpc.publicnode.com; cast call 0x713D92780c3Ccb3416FCD50468C18ABB5449B8C7 \"overrideWindow()(uint64)\" --rpc-url https://ethereum-sepolia-rpc.publicnode.com",
     "checks": [
-      "code present at escrow (0x73862690E12621b3BC5749281CE4b23fe4a1695c) and arbitrator (0xf11022Abcf5cF5c1177Eae01F630EeA51dB9d6b4)",
+      "code present at escrow (0x73862690E12621b3BC5749281CE4b23fe4a1695c) and arbitrator (0x713D92780c3Ccb3416FCD50468C18ABB5449B8C7)",
       "arbitrator.escrow() == 0x73862690E12621b3BC5749281CE4b23fe4a1695c",
       "arbitrator.overrideWindow() == 86400, agentKey == 0xaF28506B7504cE611e52De21E8e6464aB09Dc007, officer == 0xa9D9129FF53c8D7C89380399016991A5d6b42dEE"
     ]
