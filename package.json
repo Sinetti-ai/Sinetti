@@ -29,6 +29,8 @@
     "example": "hardhat run examples/full-lifecycle.ts",
     "example:dispute": "hardhat run examples/dispute.ts",
     "example:timeout": "hardhat run examples/timeout-refund.ts",
+    "deploy:sepolia": "hardhat run scripts/deploy.ts --network sepolia",
+    "deploy:local": "hardhat run scripts/deploy.ts --network hardhat",
     "typecheck": "tsc --noEmit -p tsconfig.examples.json",
     "validate:schemas": "sh -c 'for s in schemas/*.schema.json; do n=$(basename $s .schema.json); npx ajv validate --spec=draft2020 --validate-formats=false -s $s -d schemas/examples/$n.example.json || exit 1; done; npx ajv validate --spec=draft2020 --validate-formats=false -s schemas/customer-export.schema.json -d examples/delivery/customer-export.json'"
   },

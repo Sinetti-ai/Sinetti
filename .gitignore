@@ -13,3 +13,8 @@ deployments/
 !.env.example
 *.log
 .DS_Store
+
+# Published deployment registries are public record; everything else under deployments/ stays local.
+!deployments/
+deployments/*
+!deployments/sepolia.json

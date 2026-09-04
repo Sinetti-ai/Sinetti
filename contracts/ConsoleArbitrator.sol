@@ -57,9 +57,11 @@ interface ISinettiEscrowRuling {
  * @notice The day-one arbitrator for SinettiEscrowV04: the operations agent posts a
  *         proposed ruling, a named human officer may overturn it inside a fixed
  *         override window, and after the window anyone may push the standing outcome
- *         to the escrow. This reference offers a human escalation layer, deliberately
- *         living OUTSIDE the immutable escrow so it can be replaced per deal without
- *         a redeploy.
+ *         to the escrow. The officer may also rule outright at any time, with or
+ *         without a standing proposal; that lands on the escrow in the same
+ *         transaction, so a reviewed case never waits out the window. This
+ *         reference offers a human escalation layer, deliberately living OUTSIDE
+ *         the immutable escrow so it can be replaced per deal without a redeploy.
  * @notice A proposal can only start for a live Disputed deal whose signed terms
  *         name this contract as arbitrator; the officer clock cannot run early.
  * @dev A deal's signed rulingWindow must exceed this contract's proposal latency plus
@@ -114,6 +116,7 @@ contract ConsoleArbitrator is IArbitratorV04 {
     event RulingProposed(uint256 indexed dealId, uint8 outcome, uint64 overridableUntil);
     event RulingOverturned(uint256 indexed dealId, uint8 outcome);
     event RulingPushed(uint256 indexed dealId, uint8 outcome);
+    event OfficerRuled(uint256 indexed dealId, uint8 outcome);
 
     constructor(
         ISinettiEscrowRuling escrow_,
@@ -185,6 +188,29 @@ contract ConsoleArbitrator is IArbitratorV04 {
 
         proposal.outcome = outcome;
         emit RulingOverturned(dealId, outcome);
+    }
+
+    /**
+     * @notice The officer's ruling: settle the deal now. Works with or without a
+     *         standing proposal and ignores the override window, which exists to
+     *         give the officer time, not to hold up an officer who has decided.
+     *         The escrow itself still checks that the deal is Disputed, names this
+     *         arbitrator, and is inside its ruling deadline.
+     */
+    // reentrancy-safe: the pushed flag is set before the only external call, and the
+    // escrow target is immutable and itself nonReentrant on submitRuling.
+    function rule(uint256 dealId, uint8 outcome) external {
+        if (msg.sender != officer) revert NotOfficer();
+        if (outcome != 1 && outcome != 2) revert InvalidOutcome();
+        Proposal storage proposal = proposals[dealId];
+        if (proposal.pushed) revert AlreadyPushed();
+
+        if (proposal.proposedAt == 0) proposal.proposedAt = uint64(block.timestamp);
+        proposal.outcome = outcome;
+        proposal.pushed = true;
+        emit OfficerRuled(dealId, outcome);
+        emit RulingPushed(dealId, outcome);
+        escrow.submitRuling(dealId, outcome);
     }
 
     /**

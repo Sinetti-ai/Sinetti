@@ -19,7 +19,14 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm run check:dependencies
-      - run: npm run audit:dependencies
+      # The npm audit endpoint returns 503 now and then; retry before failing the job.
+      - run: |
+          for attempt in 1 2 3; do
+            npm run audit:dependencies && exit 0
+            echo "audit attempt $attempt failed; retrying in 30s"
+            sleep 30
+          done
+          exit 1
 
   hardhat:
     runs-on: ubuntu-latest

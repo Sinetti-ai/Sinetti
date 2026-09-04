@@ -319,6 +319,52 @@ describe("ConsoleArbitrator", function () {
     expect((await f.escrow.getDeal(dealId)).state).to.equal(STATE.Released);
   });
 
+  it("branch 5 - the officer rules outright: no proposal, no window, the escrow settles now", async function () {
+    const f = await loadFixture(fixture);
+    const dealId = await openDisputedDeal(f, VERDICT.Pass);
+
+    await expect(f.consoleArbitrator.connect(f.officer).rule(dealId, OUTCOME.Refund))
+      .to.emit(f.consoleArbitrator, "OfficerRuled").withArgs(dealId, OUTCOME.Refund)
+      .and.to.emit(f.consoleArbitrator, "RulingPushed").withArgs(dealId, OUTCOME.Refund);
+    expect((await f.escrow.getDeal(dealId)).state).to.equal(STATE.Refunded);
+
+    const proposal = await f.consoleArbitrator.proposals(dealId);
+    expect(proposal.pushed).to.equal(true);
+    await expect(f.consoleArbitrator.connect(f.agent).propose(dealId, OUTCOME.Release))
+      .to.be.revertedWithCustomError(f.consoleArbitrator, "AlreadyProposed");
+  });
+
+  it("branch 6 - the agent proposes and the officer confirms early: lands inside the window", async function () {
+    const f = await loadFixture(fixture);
+    const dealId = await openDisputedDeal(f, VERDICT.Pass);
+    await f.consoleArbitrator.connect(f.agent).propose(dealId, OUTCOME.Release);
+    await time.increase(60);
+
+    await expect(f.consoleArbitrator.connect(f.officer).rule(dealId, OUTCOME.Release))
+      .to.emit(f.consoleArbitrator, "RulingPushed").withArgs(dealId, OUTCOME.Release);
+    expect((await f.escrow.getDeal(dealId)).state).to.equal(STATE.Released);
+
+    await time.increase(OVERRIDE_WINDOW);
+    await expect(f.consoleArbitrator.connect(f.buyer).push(dealId))
+      .to.be.revertedWithCustomError(f.consoleArbitrator, "AlreadyPushed");
+    await expect(f.consoleArbitrator.connect(f.officer).rule(dealId, OUTCOME.Refund))
+      .to.be.revertedWithCustomError(f.consoleArbitrator, "AlreadyPushed");
+  });
+
+  it("rule guards: only the officer, valid outcomes, and only a live disputed deal", async function () {
+    const f = await loadFixture(fixture);
+    const dealId = await openDisputedDeal(f, VERDICT.Pass);
+
+    await expect(f.consoleArbitrator.connect(f.agent).rule(dealId, OUTCOME.Refund))
+      .to.be.revertedWithCustomError(f.consoleArbitrator, "NotOfficer");
+    await expect(f.consoleArbitrator.connect(f.officer).rule(dealId, 3n))
+      .to.be.revertedWithCustomError(f.consoleArbitrator, "InvalidOutcome");
+    const fundedId = await openFundedDeal(f);
+    await expect(f.consoleArbitrator.connect(f.officer).rule(fundedId, OUTCOME.Refund))
+      .to.be.revertedWithCustomError(f.escrow, "DealNotDisputed");
+    expect((await f.consoleArbitrator.proposals(fundedId)).pushed).to.equal(false);
+  });
+
   it("the officer may re-overturn within the window; the last decision stands", async function () {
     const f = await loadFixture(fixture);
     const dealId = await openDisputedDeal(f, VERDICT.Fail);

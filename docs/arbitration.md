@@ -1,11 +1,18 @@
 # Reference arbitration operator
 
-`ConsoleArbitrator` separates three actions:
+`ConsoleArbitrator` separates four actions:
 
 - the configured agent key proposes `Release` or `Refund` for a live disputed
   deal that names this arbitrator;
-- the configured officer may overturn it while the override window is open; and
+- the configured officer may overturn it while the override window is open;
+- the configured officer may rule outright at any time, with or without a
+  standing proposal, and the ruling lands on the escrow in the same
+  transaction; and
 - after the window, anyone may push the standing outcome to the escrow.
+
+The override window is the time the officer is guaranteed before an unreviewed
+proposal lands. It never holds up an officer who has reviewed: `rule` is the
+reviewed path, `push` is the unreviewed one.
 
 The contract requires the officer review window to be at least 24 hours and no
 more than 30 days. A proposal is rejected unless the live ruling deadline still

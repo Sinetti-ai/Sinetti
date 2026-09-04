@@ -10,8 +10,15 @@ import { canonicalJson, hashFile } from "../src/evidenceManifest";
 import { signSellerAcceptance } from "../src/sellerAcceptance";
 import { VERIFIER_VERSION, type AcceptanceCriteria } from "../src/verifier";
 import { repoCommitHash, runtimeHash } from "./_evidence";
+import { attachedDealAmounts, envAddress, isAttached, requireFunded, walletFromEnv } from "./_network";
 
-import type { MockManualArbitrator, SinettiEscrowV04, TestEUR } from "../typechain-types";
+import type {
+  ConsoleArbitrator,
+  IERC20,
+  MockManualArbitrator,
+  SinettiEscrowV04,
+  TestEUR
+} from "../typechain-types";
 
 export const AMOUNT = hre.ethers.parseUnits("25", 6);
 export const BOND = hre.ethers.parseUnits("5", 6);
@@ -45,10 +52,15 @@ export type LocalContext = {
   arbitratorAddress: string;
   tokenAddress: string;
   escrowAddress: string;
-  token: TestEUR;
+  token: TestEUR | IERC20;
   escrow: SinettiEscrowV04;
-  arbitrator: MockManualArbitrator;
+  arbitrator: MockManualArbitrator | ConsoleArbitrator;
   labels: Map<string, string>;
+  /** Deal amounts to use, already clamped to the escrow's caps in attached mode. */
+  dealAmounts: { amount: bigint; bond: bigint; challengerBond: bigint };
+  /** false: deployLocal() deployed fresh throwaway contracts, as always. true:
+   *  attachRemote() attached to an already deployed escrow (SINETTI_ESCROW_ADDRESS). */
+  attached: boolean;
 };
 
 function shortAddress(address: string): string {
@@ -103,6 +115,7 @@ export async function send(
   if (!receipt) throw new Error(`Transaction ${transaction.hash} was not mined`);
 
   console.log(`\n${label}`);
+  console.log(`  tx: ${transaction.hash} (block ${receipt.blockNumber})`);
   for (const event of receipt.logs.map((log) => parseLog(context, log)).filter(Boolean) as LogDescription[]) {
     const fields = event.fragment.inputs.map((input, index) =>
       `${input.name}=${formatValue(context, input.name, input.type, event.args[index])}`
@@ -180,21 +193,132 @@ export async function deployLocal(): Promise<LocalContext> {
     token,
     escrow,
     arbitrator,
-    labels
+    labels,
+    dealAmounts: { amount: AMOUNT, bond: BOND, challengerBond: CHALLENGER_BOND },
+    attached: false
   };
+}
+
+/**
+ * Attaches to an already deployed SinettiEscrowV04 instead of deploying one.
+ * Signers come from BUYER_PRIVATE_KEY / SELLER_PRIVATE_KEY / VERIFIER_PRIVATE_KEY,
+ * connected to Hardhat's configured network provider. No account is funded here:
+ * requireFunded() checks native gas and token balances up front instead.
+ */
+export async function attachRemote(): Promise<LocalContext> {
+  const escrowAddress = envAddress("SINETTI_ESCROW_ADDRESS");
+  const arbitratorAddress = envAddress("SINETTI_ARBITRATOR_ADDRESS");
+  const tokenAddress = envAddress("SINETTI_TOKEN_ADDRESS");
+
+  const buyer = walletFromEnv("BUYER_PRIVATE_KEY");
+  const seller = walletFromEnv("SELLER_PRIVATE_KEY");
+  const verifier = walletFromEnv("VERIFIER_PRIVATE_KEY");
+  const [buyerAddress, sellerAddress, verifierAddress] = await Promise.all([
+    buyer.getAddress(),
+    seller.getAddress(),
+    verifier.getAddress()
+  ]);
+
+  const escrow = (await hre.ethers.getContractAt("SinettiEscrowV04", escrowAddress)) as SinettiEscrowV04;
+  const token = (await hre.ethers.getContractAt("IERC20", tokenAddress)) as unknown as IERC20;
+  // Typed loosely: the deployed arbitrator may be ConsoleArbitrator or any other
+  // IArbitratorV04 implementation. Callers that need ConsoleArbitrator-specific
+  // methods (propose/overturn/push) attach it themselves with that address.
+  const arbitrator = (await hre.ethers.getContractAt(
+    "ConsoleArbitrator",
+    arbitratorAddress
+  )) as ConsoleArbitrator;
+
+  // Refuse to touch a mismatched deployment before any approval is granted.
+  const arbitratorEscrow = await arbitrator.escrow();
+  if (arbitratorEscrow.toLowerCase() !== escrowAddress.toLowerCase()) {
+    throw new Error(`SINETTI_ARBITRATOR_ADDRESS points at escrow ${arbitratorEscrow}, expected ${escrowAddress}.`);
+  }
+  if ((await escrow.maxAmountOf(tokenAddress)) === 0n) {
+    throw new Error(`SINETTI_TOKEN_ADDRESS ${tokenAddress} has no policy on escrow ${escrowAddress}.`);
+  }
+
+  const dealAmounts = await attachedDealAmounts(escrow, tokenAddress, {
+    amount: AMOUNT,
+    bond: BOND,
+    challengerBond: CHALLENGER_BOND
+  });
+
+  await requireFunded([
+    // The buyer's minimum covers both opening the deal and, if the caller is
+    // examples/dispute.ts, posting the challenger bond afterward.
+    {
+      label: "buyer",
+      address: buyerAddress,
+      token,
+      minToken: dealAmounts.amount + dealAmounts.challengerBond
+    },
+    { label: "seller", address: sellerAddress, token, minToken: dealAmounts.bond },
+    { label: "verifier", address: verifierAddress, token, minToken: 0n }
+  ]);
+
+  const labels = new Map<string, string>([
+    [buyerAddress.toLowerCase(), "buyer"],
+    [sellerAddress.toLowerCase(), "seller"],
+    [verifierAddress.toLowerCase(), "verifier"],
+    [arbitratorAddress.toLowerCase(), "arbitrator"],
+    [tokenAddress.toLowerCase(), "token"],
+    [escrowAddress.toLowerCase(), "escrow"]
+  ]);
+
+  console.log("SinettiEscrowV04 attached-mode lifecycle");
+  console.log(`Network: ${hre.network.name}`);
+  console.log(`Token: ${tokenAddress}`);
+  console.log(`SinettiEscrowV04: ${escrowAddress}`);
+  console.log(`Arbitrator: ${arbitratorAddress}`);
+  console.log(
+    `Deal amounts (clamped to deployed caps): amount=${dealAmounts.amount} ` +
+      `bond=${dealAmounts.bond} challengerBond=${dealAmounts.challengerBond}`
+  );
+
+  return {
+    // No deployer signer exists in attached mode; the buyer stands in for the
+    // one call (claimTimeout) that any account may make.
+    deployer: buyer,
+    buyer,
+    seller,
+    verifier,
+    buyerAddress,
+    sellerAddress,
+    verifierAddress,
+    arbitratorAddress,
+    tokenAddress,
+    escrowAddress,
+    token,
+    escrow,
+    arbitrator,
+    labels,
+    dealAmounts,
+    attached: true
+  };
+}
+
+/** SINETTI_ESCROW_ADDRESS set: attach. Unset: deploy fresh, exactly as before. */
+export async function resolveContext(): Promise<LocalContext> {
+  return isAttached() ? attachRemote() : deployLocal();
 }
 
 export async function fundAndOpen(
   context: LocalContext,
   criteria: Record<string, unknown>,
-  durationSeconds: bigint
+  durationSeconds: bigint,
+  windows?: { challengeWindow: bigint; rulingWindow: bigint }
 ): Promise<bigint> {
-  await send(context, "Mint settlement tokens to buyer", context.token.mint(context.buyerAddress, AMOUNT));
-  await send(context, "Mint bond tokens to seller", context.token.mint(context.sellerAddress, BOND));
+  const { amount, bond } = context.dealAmounts;
+  if (!context.attached) {
+    // Local mode: mint straight to the throwaway TestEUR the same as before.
+    await send(context, "Mint settlement tokens to buyer", (context.token as TestEUR).mint(context.buyerAddress, amount));
+    await send(context, "Mint bond tokens to seller", (context.token as TestEUR).mint(context.sellerAddress, bond));
+  }
   await send(
     context,
     "Buyer approves escrow principal",
-    context.token.connect(context.buyer).approve(context.escrowAddress, AMOUNT)
+    context.token.connect(context.buyer).approve(context.escrowAddress, amount)
   );
 
   const termsHash = hre.ethers.sha256(
@@ -202,7 +326,7 @@ export async function fundAndOpen(
   );
   const dealId = await context.escrow.nextDealId();
   const latestBlock = await hre.ethers.provider.getBlock("latest");
-  if (!latestBlock) throw new Error("cannot read the local chain head");
+  if (!latestBlock) throw new Error("cannot read the chain head");
   const { terms, signature } = await signSellerAcceptance({
     escrowAddress: context.escrowAddress,
     provider: hre.ethers.provider,
@@ -212,12 +336,13 @@ export async function fundAndOpen(
     verifier: context.verifierAddress,
     arbitrator: context.arbitratorAddress,
     token: context.tokenAddress,
-    amount: AMOUNT,
-    bond: BOND,
-    challengerBond: CHALLENGER_BOND,
+    amount,
+    bond,
+    challengerBond: context.dealAmounts.challengerBond,
     termsHash,
     duration: durationSeconds,
-    openBy: BigInt(latestBlock.timestamp) + durationSeconds
+    openBy: BigInt(latestBlock.timestamp) + durationSeconds,
+    ...(windows ?? {})
   });
   await send(
     context,
@@ -228,10 +353,11 @@ export async function fundAndOpen(
 }
 
 export async function postBond(context: LocalContext, dealId: bigint): Promise<void> {
+  const { bond } = context.dealAmounts;
   await send(
     context,
     "Seller approves bond",
-    context.token.connect(context.seller).approve(context.escrowAddress, BOND)
+    context.token.connect(context.seller).approve(context.escrowAddress, bond)
   );
   await send(
     context,
