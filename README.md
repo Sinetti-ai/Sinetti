@@ -28,9 +28,18 @@ It is designed to compose with those systems.
 
 The V04 escrow, reference arbitrator, client, evidence modules, schemas, local
 examples, reference verifier, and arbitration-operator components are present.
-There is no supported public deployment yet. The code is unaudited; do not use
-it or any related deployment with real funds. See [SECURITY.md](SECURITY.md) and
-the [roadmap](ROADMAP.md).
+Reference contracts are deployed on the Sepolia testnet. Addresses, transaction
+hashes, constructor arguments and the commands to reproduce the on-chain checks
+are in [deployments/sepolia.json](deployments/sepolia.json):
+
+| Contract | Address |
+| --- | --- |
+| `SinettiEscrowV04` | `0x73862690E12621b3BC5749281CE4b23fe4a1695c` |
+| `ConsoleArbitrator` | `0x713D92780c3Ccb3416FCD50468C18ABB5449B8C7` |
+
+The code is unaudited and the deployment is testnet only. Do not use it or any
+related deployment with real funds. See [SECURITY.md](SECURITY.md) and the
+[roadmap](ROADMAP.md).
 
 ## Local quick start
 
@@ -52,9 +61,9 @@ faucet, hosted verifier, or arbitration service.
 
 ## Intended integration journey
 
-The first supported public journey will use published reference contracts on a
-public testnet. An integrator should be able to use the public client modules,
-command-line tools, or examples to:
+The published reference contracts above carry this journey on Sepolia. An
+integrator should be able to use the public client modules, command-line tools,
+or examples to:
 
 - inspect the supported network and contract addresses;
 - prepare and sign a deal with explicit acceptance criteria;
