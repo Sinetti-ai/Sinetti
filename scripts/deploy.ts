@@ -295,7 +295,7 @@ export async function main(
   // against it. Existing deals stay bound to whatever arbitrator they named.
   const reuseEscrow = env.ESCROW_ADDRESS?.trim();
   const deploymentPath = path.join(deploymentsDir, `${networkName}.json`);
-  let escrow: { address: string; txHash?: string; blockNumber?: number };
+  let escrow: { address: string; txHash?: string; blockNumber?: number | null };
   let escrowRecord: unknown;
   if (reuseEscrow) {
     escrow = { address: requiredAddress(env, "ESCROW_ADDRESS") };

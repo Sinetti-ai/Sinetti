@@ -1,0 +1,7 @@
+# Published deployment records hold contract addresses under keys such as "token",
+# which the generic-api-key rule mistakes for credentials. Nothing secret lives there.
+[extend]
+useDefault = true
+
+[allowlist]
+paths = ['''^deployments/[^/]+\.json$''']
